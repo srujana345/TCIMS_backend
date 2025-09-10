@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
+  email        String        @unique
+  password     String
+  role         Role          @default(STAFF)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model Product {
+  id           Int           @id @default(autoincrement())
+  name         String
+  category     String
+  stock        Int
+  reorderPoint Int
+  supplierId   Int?
+  supplier     Supplier?     @relation(fields: [supplierId], references: [id])
+  transactions Transaction[]
+  orders       Order[] // ✅ Opposite relation for Order
+  createdAt    DateTime      @default(now())
+}
+
+model Supplier {
+  id           Int           @id @default(autoincrement())
+  name         String
+  contact      String?
+  email        String?       @unique
+  address      String?
+  products     Product[] // ✅ already correct
+  transactions Transaction[] // ✅ already correct
+  orders       Order[] // ✅ Opposite relation for Order
+  createdAt    DateTime      @default(now())
+}
+
+model Order {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id])
+  supplierId  Int?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  quantity    Int
+  status      String    @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  dueDate     DateTime? // ✅ add this for overdue alerts
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+
+model Transaction {
+  id         Int       @id @default(autoincrement())
+  type       String // "IN" or "OUT"
+  quantity   Int
+  productId  Int
+  product    Product   @relation(fields: [productId], references: [id])
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  supplierId Int?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id]) // ✅ now matched
+  createdAt  DateTime  @default(now())
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum TransactionType {
+  STOCK_IN
+  STOCK_OUT
+}
